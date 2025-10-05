@@ -1,0 +1,42 @@
+name: Build OpenWrt for Linksys WHW03 V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential ccache gawk git gettext libncurses5-dev libssl-dev python3 rsync unzip zlib1g-dev file
+
+      - name: Update feeds
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Copy default config
+        run: |
+          cp .config openwrt.config
+          make defconfig
+
+      - name: Build firmware
+        run: |
+          make -j$(nproc) V=s
+          echo "Build completed"
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-linksys-whw03v2
+          path: bin/targets/ipq40xx/generic/
