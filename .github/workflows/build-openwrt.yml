@@ -1,4 +1,4 @@
-name: Build OpenWrt for Linksys WHW03 V2
+name: Build OpenWrt (WHW03V2 + Passwall2 + OpenVPN)
 
 on:
   workflow_dispatch:
@@ -12,31 +12,36 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Checkout source
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
-          sudo apt update
-          sudo apt install -y build-essential ccache gawk git gettext libncurses5-dev libssl-dev python3 rsync unzip zlib1g-dev file
+          sudo apt-get update
+          sudo apt-get install -y build-essential ccache gawk gettext git libncurses5-dev libssl-dev python3 rsync unzip zlib1g-dev file
 
       - name: Update feeds
         run: |
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Copy default config
+          # اضافه کردن سورس Passwall2
+          echo "src-git passwall2 https://github.com/xiaorouji/openwrt-passwall2.git;main" >> feeds.conf.default
+          ./scripts/feeds update passwall2
+          ./scripts/feeds install -a -p passwall2
+
+      - name: Copy config
         run: |
-          cp .config openwrt.config
+          cp .config .config.backup
           make defconfig
 
       - name: Build firmware
         run: |
           make -j$(nproc) V=s
-          echo "Build completed"
+          echo "✅ Build finished"
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4
         with:
-          name: openwrt-linksys-whw03v2
+          name: openwrt-whw03v2-passwall2
           path: bin/targets/ipq40xx/generic/
